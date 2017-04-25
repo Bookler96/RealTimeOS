@@ -9,7 +9,8 @@ void InverseLED(int type);
 typedef struct{
 	
 	int owner;
-
+  int countInQueue;
+	int CurrentPointerInQueue;
 	
 } mutex;
 

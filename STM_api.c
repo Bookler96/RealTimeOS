@@ -35,14 +35,59 @@ void InverseLED(int type)
 
 int mutex_init(mutex *mutex){
 	mutex->owner = -1;
+	mutex->countInQueue = 0;
+	mutex->CurrentPointerInQueue = 0;
 	return 0;
 }
 int mutex_lock(mutex *mutex){
-	while(mutex->owner != getpid() && mutex->owner != -1);
+	
+	int myNumberInQueue = 0;
+	
+	
+	CRITICAL_START();
+	if(mutex->owner == getpid()){
+		CRITICAL_END();  
+		return 0;
+	}
+	
+	
+	if(mutex->owner == -1){
+		
+		mutex->owner = getpid();
+		mutex->countInQueue = 0;
+		mutex->CurrentPointerInQueue = 0;
+		return 0;
+		
+	}
+	
+	if(mutex->owner != getpid()){
+			
+		 myNumberInQueue = mutex->countInQueue+1;
+		 mutex->countInQueue++;
+		
+	}
+	
+	
+	
+	
+	CRITICAL_END();
+	while(mutex->CurrentPointerInQueue != myNumberInQueue);
+	
+	
+	CRITICAL_START();
+	if(mutex->CurrentPointerInQueue == myNumberInQueue){
+		  mutex->owner = getpid();
+		  CRITICAL_END();
+		  return 0;
+	}
+	CRITICAL_END();
+	
+	return -1;
+/*	while(mutex->owner != getpid() && mutex->owner != -1);
 	CRITICAL_START();
 	mutex->owner = getpid();
 	CRITICAL_END();
-	return 0;
+	return 0;*/
 }
 
 int mutex_trylock(mutex *mutex){
@@ -57,7 +102,14 @@ int mutex_trylock(mutex *mutex){
 
 
 int mutex_unlock(mutex *mutex){
-	mutex->owner = 0;
+	mutex->owner = -1;
+	mutex->CurrentPointerInQueue++;
+	CRITICAL_START();
+	if(mutex->countInQueue <= mutex->CurrentPointerInQueue){
+		mutex->countInQueue = 0;
+		mutex->CurrentPointerInQueue = 0;
+	}
+	CRITICAL_END();
 	return 0;
 }
 

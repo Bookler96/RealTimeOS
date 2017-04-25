@@ -1,17 +1,24 @@
 #include "stm32f0xx.h"
 #include "stdlib.h"
-
+#include "STM_api.h" 
 
 #define TASK_LIMIT 3
 
 int TIMESTAMP = 0;
-
+mutex  mutex_test;
 unsigned char Stacks[TASK_LIMIT][0x200];
 
 char  OutputBuffer[256];
 int countOutputBuffer = 0;
 int blockRead = 0;
 int USARTReady = 0;
+
+int CurrentInpudPid  = -1;
+int countInInputQueue = 0;
+int currentPointer = 0;
+
+char InputBuffer[256];
+int countCharInBuffer;
 
 //Context
 typedef struct context{
@@ -48,7 +55,7 @@ int CriticalProcess;
 * @param Task
 * Return pid
 **/
-extern int IncludeTask( void * Task){
+extern int IncludeTask( void * Task ){
 	
 		if(tnum < 8){
 		
@@ -124,7 +131,7 @@ void  InitRTOS(){
 	
   taskCount = 1;
 	USARTInit();
-	IncludeTask(USARTSend);
+//	IncludeTask(USARTSend);
 	print("OS Init success\n");
 	AfterInit();
 
@@ -191,7 +198,10 @@ void USARTInit(){
 
 extern int print(char * output){
 	 
+	
 	int i = 0;
+	return 0;
+	CRITICAL_START();
 	if(USARTReady == 0)
 		USARTInit();
 	
@@ -203,9 +213,36 @@ extern int print(char * output){
 			
 		countOutputBuffer+=i;
 		blockRead = 0;
+		CRITICAL_END();
 		return 0;
 		
 }
+
+
+/*extern char * read(char * input){
+	 
+	CRITICAL_START();
+	int myNumberInQueue; 
+	
+	if(CurrentInpudPid != -1){
+		
+		int myNumberInQueue = countInInputQueue++;
+		
+	}
+	CRITICAL_END();
+	
+	
+	while(currentPointer != myNumberInQueue);
+	
+	CRITICAL_START();
+	if(currentPointer == myNumberInQueue){
+		CurrentInpudPid = getpid();
+	}
+	CRITICAL_END();
+	
+	
+	
+}*/
 
 void USARTSend(){
 	
@@ -218,6 +255,8 @@ void USARTSend(){
 		
 		while((USART1->ISR & USART_ISR_TXE) == 0);
 			i++;
+			if(i >= countOutputBuffer)
+				countOutputBuffer = 0;
 		}
 		
 		if(countOutputBuffer == 256)
@@ -226,6 +265,27 @@ void USARTSend(){
 	}
 	
 }
+
+/*void USART1_IRQHandler(void){
+	short unsigned int dat = 0;
+	if((USART1->ISR & USART_ISR_RXNE) == USART_ISR_RXNE && CurrentInpudPid != 0){
+	
+        USART1->ISR&=~USART_ISR_RXNE;
+				dat = USART1->RDR;
+				
+		    
+		
+		
+				if(currentPtr < 100){
+						currentText[currentPtr++] = dat;
+				}
+				if(dat == '0'){
+					USARTSend(currentText);
+				}
+				USARTSend(currentText);
+
+	}
+}*/
 
 int main(){
 	return 0;
